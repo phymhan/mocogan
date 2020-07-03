@@ -12,6 +12,7 @@ from torch import nn, optim
 from torch.autograd import Variable
 
 from models import Discriminator_I, Discriminator_V, Generator_I, GRU
+from models_stylegan2 import Generator, Discriminator
 
 
 parser = argparse.ArgumentParser(description='Start trainning MoCoGAN.....')
@@ -25,6 +26,9 @@ parser.add_argument('--niter', type=int, default=120000,
                      help='set num of iterations, default: 120000')
 parser.add_argument('--pre-train', type=int, default=-1,
                      help='set 1 when you use pre-trained models')
+parser.add_argument('--model', type=str, default='default')
+parser.add_argument('--channel_multiplier', type=int, default=2)
+parser.add_argument('--size', type=int, default=256)
 
 args       = parser.parse_args()
 cuda       = args.cuda
@@ -94,10 +98,17 @@ d_C = 50
 d_M = d_E
 nz  = d_C + d_M
 criterion = nn.BCELoss()
+device = 'cuda'
 
-dis_i = Discriminator_I(nc, ndf, ngpu=ngpu)
 dis_v = Discriminator_V(nc, ndf, T=T, ngpu=ngpu)
-gen_i = Generator_I(nc, ngf, nz, ngpu=ngpu)
+if args.model == 'default':
+    dis_i = Discriminator_I(nc, ndf, ngpu=ngpu)
+    gen_i = Generator_I(nc, ngf, nz, ngpu=ngpu)
+else:
+    args.latent = 512
+    args.n_mlp = 8
+    dis_i = Discriminator(args.size, channel_multiplier=args.channel_multiplier).to(device)
+    gen_i = Generator(args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier).to(device)
 gru = GRU(d_E, hidden_size, gpu=cuda)
 gru.initWeight()
 
