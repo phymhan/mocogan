@@ -62,15 +62,15 @@ dataloader = DataLoader(dataset, num_workers=4, batch_size=batch_size, shuffle=T
 n_videos = len(dataset)
 
 # for true video
-def trim(video):
-    start = np.random.randint(0, video.shape[1] - (T+1))
-    end = start + T
-    return video[:, start:end, :, :]
+# def trim(video):
+#     start = np.random.randint(0, video.shape[1] - T)
+#     end = start + T
+#     return video[:, start:end, :, :]
 
 # for input noises to generate fake video
 # note that noises are trimmed randomly from n_frames to T for efficiency
 def trim_noise(noise):
-    start = np.random.randint(0, noise.size(1) - (T+1))
+    start = np.random.randint(0, noise.size(1) - T)
     end = start + T
     return noise[:, start:end, :, :, :]
 
