@@ -14,6 +14,7 @@ from torch.autograd import Variable
 from models import Discriminator_I, Discriminator_V, Generator_I, GRU
 from torch.utils.data import DataLoader
 from data import SkVideoFolder
+import pdb
 # from models_stylegan2 import Generator, Discriminator
 
 
@@ -46,6 +47,7 @@ np.random.seed(seed)
 if cuda == True:
     torch.cuda.set_device(0)
 
+T = 16
 
 ''' prepare dataset '''
 current_path = os.path.dirname(__file__)
@@ -54,12 +56,11 @@ current_path = os.path.dirname(__file__)
 # videos = [ skvideo.io.vread(file) for file in files ]
 # # transpose each video to (nc, n_frames, img_size, img_size), and devide by 255
 # videos = [ video.transpose(3, 0, 1, 2) / 255.0 for video in videos ]
-dataset = SkVideoFolder('resized_data')
+dataset = SkVideoFolder('resized_data', T)
 dataloader = DataLoader(dataset, num_workers=4, batch_size=batch_size, shuffle=True, drop_last=True, pin_memory=True)
 
 ''' prepare video sampling '''
 n_videos = len(dataset)
-T = 16
 
 # for true video
 def trim(video):
@@ -115,7 +116,6 @@ gru.initWeight()
 
 
 ''' prepare for train '''
-
 label = torch.FloatTensor()
 
 def timeSince(since):
@@ -216,12 +216,13 @@ start_time = time.time()
 
 for epoch in range(1, n_iter+1):
     for real_videos in dataloader:
+        pdb.set_trace()
         ''' prepare real images '''
         # real_videos.size() => (batch_size, nc, T, img_size, img_size)
         # real_videos = random_choice()
         if cuda == True:
             real_videos = real_videos.cuda()
-        real_videos = Variable(real_videos)
+        # real_videos = Variable(real_videos)
         real_img = real_videos[:, :, np.random.randint(0, T), :, :]
 
         ''' prepare fake images '''
