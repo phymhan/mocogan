@@ -84,7 +84,7 @@ def random_choice():
     return X
 
 # video length distribution
-video_lengths = [video.shape[1] for video in videos]
+# video_lengths = [video.shape[1] for video in videos]
 
 
 ''' set models '''
