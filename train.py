@@ -181,7 +181,7 @@ def bp_i(inputs, y, retain=False):
     outputs = dis_i(inputs)
     err = criterion(outputs, labelv)
     err.backward(retain_graph=retain)
-    return err.data[0], outputs.data.mean()
+    return err.item(), outputs.data.mean()
 
 def bp_v(inputs, y, retain=False):
     label.resize_(inputs.size(0)).fill_(y)
@@ -189,7 +189,7 @@ def bp_v(inputs, y, retain=False):
     outputs = dis_v(inputs)
     err = criterion(outputs, labelv)
     err.backward(retain_graph=retain)
-    return err.data[0], outputs.data.mean()
+    return err.item(), outputs.data.mean()
 
 
 ''' gen input noise for fake video '''
