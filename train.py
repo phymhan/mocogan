@@ -63,14 +63,14 @@ n_videos = len(dataset)
 
 # for true video
 # def trim(video):
-#     start = np.random.randint(0, video.shape[1] - T)
+#     start = np.random.randint(0, video.shape[1] - T + 1)
 #     end = start + T
 #     return video[:, start:end, :, :]
 
 # for input noises to generate fake video
 # note that noises are trimmed randomly from n_frames to T for efficiency
 def trim_noise(noise):
-    start = np.random.randint(0, noise.size(1) - T)
+    start = np.random.randint(0, noise.size(1) - T + 1)
     end = start + T
     return noise[:, start:end, :, :, :]
 
@@ -229,7 +229,6 @@ for epoch in range(1, args.nepochs+1):
         n_frames = T
         Z = gen_z(n_frames)  # Z.size() => (batch_size, n_frames, nz, 1, 1)
         # trim => (batch_size, T, nz, 1, 1)
-        pdb.set_trace()
         Z = trim_noise(Z)
         # generate videos
         Z = Z.contiguous().view(batch_size*T, nz, 1, 1)

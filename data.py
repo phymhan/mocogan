@@ -5,7 +5,7 @@ import numpy as np
 
 
 def trim(video, T):
-    start = np.random.randint(0, video.shape[1] - T)
+    start = np.random.randint(0, video.shape[1] - T + 1)
     end = start + T
     return video[:, start:end, :, :]
 
