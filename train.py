@@ -12,7 +12,7 @@ from torch import nn, optim
 from torch.autograd import Variable
 
 from models import Discriminator_I, Discriminator_V, Generator_I, GRU
-from models_stylegan2 import Generator, Discriminator
+# from models_stylegan2 import Generator, Discriminator
 
 
 parser = argparse.ArgumentParser(description='Start trainning MoCoGAN.....')
