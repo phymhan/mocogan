@@ -37,7 +37,6 @@ args       = parser.parse_args()
 cuda       = args.cuda
 ngpu       = args.ngpu
 batch_size = args.batch_size
-n_iter     = args.niter
 pre_train  = args.pre_train
 
 
