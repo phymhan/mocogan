@@ -1,6 +1,7 @@
 import torch
 import os
 import skvideo
+import numpy as np
 
 
 def trim(video, T):
