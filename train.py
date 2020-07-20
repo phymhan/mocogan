@@ -229,6 +229,7 @@ for epoch in range(1, args.nepochs+1):
         n_frames = T
         Z = gen_z(n_frames)  # Z.size() => (batch_size, n_frames, nz, 1, 1)
         # trim => (batch_size, T, nz, 1, 1)
+        pdb.set_trace()
         Z = trim_noise(Z)
         # generate videos
         Z = Z.contiguous().view(batch_size*T, nz, 1, 1)
