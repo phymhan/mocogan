@@ -242,6 +242,7 @@ for epoch in range(1, args.nepochs+1):
         ''' train discriminators '''
         # video
         dis_v.zero_grad()
+        pdb.set_trace()
         err_Dv_real, Dv_real_mean = bp_v(real_videos, 0.9)
         err_Dv_fake, Dv_fake_mean = bp_v(fake_videos.detach(), 0)
         err_Dv = err_Dv_real + err_Dv_fake
