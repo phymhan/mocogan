@@ -25,13 +25,13 @@ parser.add_argument('--ngpu', type=int, default=1,
                      help='set the number of gpu you use')
 parser.add_argument('--batch-size', type=int, default=16,
                      help='set batch_size, default: 16')
-parser.add_argument('--niter', type=int, default=120000,
-                     help='set num of iterations, default: 120000')
+parser.add_argument('--nepochs', type=int, default=200)
 parser.add_argument('--pre-train', type=int, default=-1,
                      help='set 1 when you use pre-trained models')
 parser.add_argument('--model', type=str, default='default')
 parser.add_argument('--channel_multiplier', type=int, default=2)
 parser.add_argument('--size', type=int, default=256)
+parser.add_argument('--T', type=int, default=16)
 
 args       = parser.parse_args()
 cuda       = args.cuda
@@ -47,7 +47,7 @@ np.random.seed(seed)
 if cuda == True:
     torch.cuda.set_device(0)
 
-T = 16
+T = args.T
 
 ''' prepare dataset '''
 current_path = os.path.dirname(__file__)
@@ -213,10 +213,9 @@ def gen_z(n_frames):
 ''' train models '''
 
 start_time = time.time()
-
-for epoch in range(1, n_iter+1):
+n_iter = 0
+for epoch in range(1, args.nepochs+1):
     for real_videos in dataloader:
-        pdb.set_trace()
         ''' prepare real images '''
         # real_videos.size() => (batch_size, nc, T, img_size, img_size)
         # real_videos = random_choice()
@@ -266,15 +265,17 @@ for epoch in range(1, n_iter+1):
         optim_Gi.step()
         optim_GRU.step()
 
-        if epoch % 100 == 0:
+        n_iter += 1
+
+        if n_iter % 100 == 0:
             print('[%d/%d] (%s) Loss_Di: %.4f Loss_Dv: %.4f Loss_Gi: %.4f Loss_Gv: %.4f Di_real_mean %.4f Di_fake_mean %.4f Dv_real_mean %.4f Dv_fake_mean %.4f'
                 % (epoch, n_iter, timeSince(start_time), err_Di, err_Dv, err_Gi, err_Gv, Di_real_mean, Di_fake_mean, Dv_real_mean, Dv_fake_mean))
 
-        if epoch % 1000 == 0:
-            save_video(fake_videos[0].data.cpu().numpy().transpose(1, 2, 3, 0), epoch)
+        if n_iter % 1000 == 0:
+            save_video(fake_videos[0].data.cpu().numpy().transpose(1, 2, 3, 0), n_iter)
 
-        if epoch % 10000 == 0:
-            checkpoint(dis_i, optim_Di, epoch)
-            checkpoint(dis_v, optim_Dv, epoch)
-            checkpoint(gen_i, optim_Gi, epoch)
-            checkpoint(gru,   optim_GRU, epoch)
+        if n_iter % 10000 == 0:
+            checkpoint(dis_i, optim_Di, n_iter)
+            checkpoint(dis_v, optim_Dv, n_iter)
+            checkpoint(gen_i, optim_Gi, n_iter)
+            checkpoint(gru,   optim_GRU, n_iter)
