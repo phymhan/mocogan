@@ -58,7 +58,7 @@ dataset = SkVideoFolder('resized_data')
 dataloader = DataLoader(dataset, num_workers=4, batch_size=batch_size, shuffle=True, drop_last=True, pin_memory=True)
 
 ''' prepare video sampling '''
-# n_videos = len(videos)
+n_videos = len(dataset)
 T = 16
 
 # for true video
@@ -226,7 +226,8 @@ for epoch in range(1, n_iter+1):
 
         ''' prepare fake images '''
         # note that n_frames is sampled from video length distribution
-        n_frames = video_lengths[np.random.randint(0, n_videos)]
+        # n_frames = video_lengths[np.random.randint(0, n_videos)]
+        n_frames = T
         Z = gen_z(n_frames)  # Z.size() => (batch_size, n_frames, nz, 1, 1)
         # trim => (batch_size, T, nz, 1, 1)
         Z = trim_noise(Z)
