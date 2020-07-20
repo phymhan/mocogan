@@ -215,6 +215,7 @@ start_time = time.time()
 n_iter = 0
 for epoch in range(1, args.nepochs+1):
     for real_videos in dataloader:
+        real_videos = real_videos.float()
         ''' prepare real images '''
         # real_videos.size() => (batch_size, nc, T, img_size, img_size)
         # real_videos = random_choice()
@@ -242,7 +243,6 @@ for epoch in range(1, args.nepochs+1):
         ''' train discriminators '''
         # video
         dis_v.zero_grad()
-        pdb.set_trace()
         err_Dv_real, Dv_real_mean = bp_v(real_videos, 0.9)
         err_Dv_fake, Dv_fake_mean = bp_v(fake_videos.detach(), 0)
         err_Dv = err_Dv_real + err_Dv_fake
