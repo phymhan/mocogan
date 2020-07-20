@@ -12,6 +12,8 @@ from torch import nn, optim
 from torch.autograd import Variable
 
 from models import Discriminator_I, Discriminator_V, Generator_I, GRU
+from torch.utils.data import DataLoader
+from data import SkVideoFolder
 # from models_stylegan2 import Generator, Discriminator
 
 
@@ -46,18 +48,17 @@ if cuda == True:
 
 
 ''' prepare dataset '''
-
 current_path = os.path.dirname(__file__)
-resized_path = os.path.join(current_path, 'resized_data')
-files = glob.glob(resized_path+'/*')
-videos = [ skvideo.io.vread(file) for file in files ]
-# transpose each video to (nc, n_frames, img_size, img_size), and devide by 255
-videos = [ video.transpose(3, 0, 1, 2) / 255.0 for video in videos ]
-
+# resized_path = os.path.join(current_path, 'resized_data')
+# files = glob.glob(resized_path+'/*')
+# videos = [ skvideo.io.vread(file) for file in files ]
+# # transpose each video to (nc, n_frames, img_size, img_size), and devide by 255
+# videos = [ video.transpose(3, 0, 1, 2) / 255.0 for video in videos ]
+dataset = SkVideoFolder('resized_data')
+dataloader = DataLoader(dataset, num_workers=4, batch_size=batch_size, shuffle=True, drop_last=True, pin_memory=True)
 
 ''' prepare video sampling '''
-
-n_videos = len(videos)
+# n_videos = len(videos)
 T = 16
 
 # for true video
@@ -214,63 +215,64 @@ def gen_z(n_frames):
 start_time = time.time()
 
 for epoch in range(1, n_iter+1):
-    ''' prepare real images '''
-    # real_videos.size() => (batch_size, nc, T, img_size, img_size)
-    real_videos = random_choice()
-    if cuda == True:
-        real_videos = real_videos.cuda()
-    real_videos = Variable(real_videos)
-    real_img = real_videos[:, :, np.random.randint(0, T), :, :]
+    for real_videos in dataloader:
+        ''' prepare real images '''
+        # real_videos.size() => (batch_size, nc, T, img_size, img_size)
+        # real_videos = random_choice()
+        if cuda == True:
+            real_videos = real_videos.cuda()
+        real_videos = Variable(real_videos)
+        real_img = real_videos[:, :, np.random.randint(0, T), :, :]
 
-    ''' prepare fake images '''
-    # note that n_frames is sampled from video length distribution
-    n_frames = video_lengths[np.random.randint(0, n_videos)]
-    Z = gen_z(n_frames)  # Z.size() => (batch_size, n_frames, nz, 1, 1)
-    # trim => (batch_size, T, nz, 1, 1)
-    Z = trim_noise(Z)
-    # generate videos
-    Z = Z.contiguous().view(batch_size*T, nz, 1, 1)
-    fake_videos = gen_i(Z)
-    fake_videos = fake_videos.view(batch_size, T, nc, img_size, img_size)
-    # transpose => (batch_size, nc, T, img_size, img_size)
-    fake_videos = fake_videos.transpose(2, 1)
-    # img sampling
-    fake_img = fake_videos[:, :, np.random.randint(0, T), :, :]
+        ''' prepare fake images '''
+        # note that n_frames is sampled from video length distribution
+        n_frames = video_lengths[np.random.randint(0, n_videos)]
+        Z = gen_z(n_frames)  # Z.size() => (batch_size, n_frames, nz, 1, 1)
+        # trim => (batch_size, T, nz, 1, 1)
+        Z = trim_noise(Z)
+        # generate videos
+        Z = Z.contiguous().view(batch_size*T, nz, 1, 1)
+        fake_videos = gen_i(Z)
+        fake_videos = fake_videos.view(batch_size, T, nc, img_size, img_size)
+        # transpose => (batch_size, nc, T, img_size, img_size)
+        fake_videos = fake_videos.transpose(2, 1)
+        # img sampling
+        fake_img = fake_videos[:, :, np.random.randint(0, T), :, :]
 
-    ''' train discriminators '''
-    # video
-    dis_v.zero_grad()
-    err_Dv_real, Dv_real_mean = bp_v(real_videos, 0.9)
-    err_Dv_fake, Dv_fake_mean = bp_v(fake_videos.detach(), 0)
-    err_Dv = err_Dv_real + err_Dv_fake
-    optim_Dv.step()
-    # image
-    dis_i.zero_grad()
-    err_Di_real, Di_real_mean = bp_i(real_img, 0.9)
-    err_Di_fake, Di_fake_mean = bp_i(fake_img.detach(), 0)
-    err_Di = err_Di_real + err_Di_fake
-    optim_Di.step()
+        ''' train discriminators '''
+        # video
+        dis_v.zero_grad()
+        err_Dv_real, Dv_real_mean = bp_v(real_videos, 0.9)
+        err_Dv_fake, Dv_fake_mean = bp_v(fake_videos.detach(), 0)
+        err_Dv = err_Dv_real + err_Dv_fake
+        optim_Dv.step()
+        # image
+        dis_i.zero_grad()
+        err_Di_real, Di_real_mean = bp_i(real_img, 0.9)
+        err_Di_fake, Di_fake_mean = bp_i(fake_img.detach(), 0)
+        err_Di = err_Di_real + err_Di_fake
+        optim_Di.step()
 
 
-    ''' train generators '''
-    gen_i.zero_grad()
-    gru.zero_grad()
-    # video. notice retain=True for back prop twice
-    err_Gv, _ = bp_v(fake_videos, 0.9, retain=True)
-    # images
-    err_Gi, _ = bp_i(fake_img, 0.9)
-    optim_Gi.step()
-    optim_GRU.step()
+        ''' train generators '''
+        gen_i.zero_grad()
+        gru.zero_grad()
+        # video. notice retain=True for back prop twice
+        err_Gv, _ = bp_v(fake_videos, 0.9, retain=True)
+        # images
+        err_Gi, _ = bp_i(fake_img, 0.9)
+        optim_Gi.step()
+        optim_GRU.step()
 
-    if epoch % 100 == 0:
-        print('[%d/%d] (%s) Loss_Di: %.4f Loss_Dv: %.4f Loss_Gi: %.4f Loss_Gv: %.4f Di_real_mean %.4f Di_fake_mean %.4f Dv_real_mean %.4f Dv_fake_mean %.4f'
-              % (epoch, n_iter, timeSince(start_time), err_Di, err_Dv, err_Gi, err_Gv, Di_real_mean, Di_fake_mean, Dv_real_mean, Dv_fake_mean))
+        if epoch % 100 == 0:
+            print('[%d/%d] (%s) Loss_Di: %.4f Loss_Dv: %.4f Loss_Gi: %.4f Loss_Gv: %.4f Di_real_mean %.4f Di_fake_mean %.4f Dv_real_mean %.4f Dv_fake_mean %.4f'
+                % (epoch, n_iter, timeSince(start_time), err_Di, err_Dv, err_Gi, err_Gv, Di_real_mean, Di_fake_mean, Dv_real_mean, Dv_fake_mean))
 
-    if epoch % 1000 == 0:
-        save_video(fake_videos[0].data.cpu().numpy().transpose(1, 2, 3, 0), epoch)
+        if epoch % 1000 == 0:
+            save_video(fake_videos[0].data.cpu().numpy().transpose(1, 2, 3, 0), epoch)
 
-    if epoch % 10000 == 0:
-        checkpoint(dis_i, optim_Di, epoch)
-        checkpoint(dis_v, optim_Dv, epoch)
-        checkpoint(gen_i, optim_Gi, epoch)
-        checkpoint(gru,   optim_GRU, epoch)
+        if epoch % 10000 == 0:
+            checkpoint(dis_i, optim_Di, epoch)
+            checkpoint(dis_v, optim_Dv, epoch)
+            checkpoint(gen_i, optim_Gi, epoch)
+            checkpoint(gru,   optim_GRU, epoch)
